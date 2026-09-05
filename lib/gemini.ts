@@ -67,13 +67,19 @@ Rules:
   const contents: Array<string | { inlineData: { data: string; mimeType: string } }> = [];
 
   // PATH 1: PDF Document Processing
-  if (fileBuffer && mimeType === 'application/pdf') {
-    const pdfText = await extractTextFromPdfBufferAsync(fileBuffer);
+  const isPdf = fileBuffer && (mimeType === 'application/pdf' || mimeType === 'application/x-pdf' || (mimeType && mimeType.includes('pdf')));
+  if (isPdf && fileBuffer) {
+    let pdfText = '';
+    try {
+      pdfText = await extractTextFromPdfBufferAsync(fileBuffer);
+    } catch (e) {
+      console.error('[PDF Text Extraction Error]:', e);
+    }
     
     if (pdfText && pdfText.trim().length > 0) {
       contents.push(`Extracted PDF Medical Report Text:\n${pdfText.trim()}`);
     } else {
-      // Send PDF inlineData if PDF contains scanned image objects
+      // Fallback: Send PDF inlineData if PDF contains scanned image objects or text extraction yielded empty string
       contents.push({
         inlineData: {
           data: fileBuffer.toString('base64'),
@@ -89,6 +95,16 @@ Rules:
       inlineData: {
         data: fileBuffer.toString('base64'),
         mimeType: mimeType,
+      },
+    });
+  }
+
+  // Fallback for fileBuffer if mimeType was generic octet-stream
+  if (fileBuffer && contents.length === 0) {
+    contents.push({
+      inlineData: {
+        data: fileBuffer.toString('base64'),
+        mimeType: 'application/pdf',
       },
     });
   }
@@ -194,6 +210,7 @@ Rules:
     } catch (err: unknown) {
       const isLastAttempt = attempt >= maxAttempts;
       const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error(`[Gemini Extraction Error - Attempt ${attempt}]:`, errorMessage);
       
       const isTransient = errorMessage.includes('429') || errorMessage.includes('503') || errorMessage.includes('ETIMEDOUT') || errorMessage.includes('fetch failed');
 
@@ -204,7 +221,7 @@ Rules:
             code: 'GEMINI_PROCESSING_FAILED',
             message: isTransient 
               ? 'The AI processing service is temporarily busy. Please retry in a moment.' 
-              : 'The PDF or report file could not be parsed by the AI engine. Please verify the file or paste the report text.',
+              : `The PDF or report file could not be parsed by the AI engine: ${errorMessage}. Please verify the file or paste the report text.`,
             retryable: isTransient,
           },
         };

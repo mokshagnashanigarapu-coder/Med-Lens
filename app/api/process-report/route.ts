@@ -69,6 +69,18 @@ export async function POST(req: NextRequest) {
 
       reportFileName = file.name;
       mimeType = file.type || 'application/octet-stream';
+      
+      const fileNameLower = reportFileName.toLowerCase();
+      if (!mimeType || mimeType === 'application/octet-stream' || mimeType === 'application/x-pdf') {
+        if (fileNameLower.endsWith('.pdf')) {
+          mimeType = 'application/pdf';
+        } else if (fileNameLower.endsWith('.png')) {
+          mimeType = 'image/png';
+        } else if (fileNameLower.endsWith('.jpg') || fileNameLower.endsWith('.jpeg')) {
+          mimeType = 'image/jpeg';
+        }
+      }
+
       const arrayBuffer = await file.arrayBuffer();
       fileBuffer = Buffer.from(arrayBuffer);
     }

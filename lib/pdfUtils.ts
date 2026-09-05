@@ -14,7 +14,8 @@ const require = createRequire(import.meta.url);
 export async function extractTextFromPdfBufferAsync(pdfBuffer: Buffer): Promise<string> {
   let parser: { getText: () => Promise<any>; destroy?: () => Promise<any> } | null = null;
   try {
-    const { PDFParse } = require('pdf-parse');
+    const pdfModule = require('pdf-parse');
+    const PDFParse = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse) || (typeof pdfModule === 'function' ? pdfModule : null);
     if (typeof PDFParse === 'function') {
       parser = new PDFParse({ data: pdfBuffer });
       if (parser) {
@@ -29,8 +30,9 @@ export async function extractTextFromPdfBufferAsync(pdfBuffer: Buffer): Promise<
           }
         }
 
-        if (extracted && extracted.trim().length > 0) {
-          return extracted.trim();
+        const sanitized = sanitizeExtractedText(extracted);
+        if (sanitized && sanitized.length > 0) {
+          return sanitized;
         }
       }
     }
@@ -55,6 +57,18 @@ export function extractTextFromPdfBuffer(pdfBuffer: Buffer): string {
 }
 
 /**
+ * Strips non-printable control characters while preserving readable text layout.
+ */
+function sanitizeExtractedText(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Decompresses /FlateDecode streams manually using zlib if pdf-parse encounters an unhandled stream edge case.
  */
 function extractTextFromCompressedPdfBuffer(pdfBuffer: Buffer): string {
@@ -71,9 +85,15 @@ function extractTextFromCompressedPdfBuffer(pdfBuffer: Buffer): string {
         const decompressed = zlib.inflateSync(streamBytes);
         decompressedStr = decompressed.toString('latin1');
       } catch {
-        decompressedStr = match[1];
+        try {
+          const decompressedRaw = zlib.inflateRawSync(streamBytes);
+          decompressedStr = decompressedRaw.toString('latin1');
+        } catch {
+          decompressedStr = match[1];
+        }
       }
 
+      // 1. Literal PDF strings: (text) Tj
       const tjRegex = /\(([^()]*)\)\s*Tj/g;
       let tjMatch;
       while ((tjMatch = tjRegex.exec(decompressedStr)) !== null) {
@@ -82,6 +102,7 @@ function extractTextFromCompressedPdfBuffer(pdfBuffer: Buffer): string {
         }
       }
 
+      // 2. PDF Array strings: [(t1) -10 (t2)] TJ
       const arrayTjRegex = /\[(.*?)\]\s*TJ/g;
       let arrayMatch;
       while ((arrayMatch = arrayTjRegex.exec(decompressedStr)) !== null) {
@@ -94,9 +115,26 @@ function extractTextFromCompressedPdfBuffer(pdfBuffer: Buffer): string {
           }
         }
       }
+
+      // 3. Hexadecimal PDF strings: <48656c6c6f> Tj or TJ
+      const hexTjRegex = /<([0-9a-fA-F]+)>\s*(?:Tj|TJ)/g;
+      let hexMatch;
+      while ((hexMatch = hexTjRegex.exec(decompressedStr)) !== null) {
+        const hex = hexMatch[1];
+        let decoded = '';
+        for (let i = 0; i < hex.length; i += 2) {
+          const code = parseInt(hex.substring(i, i + 2), 16);
+          if (code >= 32 && code <= 126) {
+            decoded += String.fromCharCode(code);
+          }
+        }
+        if (decoded.trim()) {
+          textSegments.push(decoded);
+        }
+      }
     }
 
-    return textSegments.join(' ').replace(/\s+/g, ' ').trim();
+    return sanitizeExtractedText(textSegments.join(' '));
   } catch {
     return '';
   }
