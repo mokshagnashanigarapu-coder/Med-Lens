@@ -4,24 +4,44 @@ import zlib from 'zlib';
 const require = createRequire(import.meta.url);
 
 /**
- * Production-grade async PDF text extraction using pdf-parse PDFParse class.
- * Handles compressed FlateDecode streams, font mappings, and multi-page text objects.
+ * Production-grade async PDF text extraction using pdf-parse v2.4.5 API format:
+ *   const parser = new PDFParse({ data: pdfBuffer });
+ *   const result = await parser.getText();
+ *   await parser.destroy();
+ * 
+ * Fully compatible with Next.js 15 Node.js Serverless & Cloud Run runtimes.
  */
 export async function extractTextFromPdfBufferAsync(pdfBuffer: Buffer): Promise<string> {
+  let parser: { getText: () => Promise<any>; destroy?: () => Promise<any> } | null = null;
   try {
-    const pdfModule = require('pdf-parse');
-    const PDFParse = pdfModule.PDFParse || pdfModule;
-    
+    const { PDFParse } = require('pdf-parse');
     if (typeof PDFParse === 'function') {
-      const parser = new PDFParse(new Uint8Array(pdfBuffer));
-      const res = await parser.getText();
-      const extracted = typeof res === 'string' ? res : (res && res.text ? res.text : '');
-      if (extracted && extracted.trim().length > 0) {
-        return extracted.trim();
+      parser = new PDFParse({ data: pdfBuffer });
+      if (parser) {
+        const res = await parser.getText();
+        const extracted = typeof res === 'string' ? res : (res && res.text ? res.text : '');
+
+        if (typeof parser.destroy === 'function') {
+          try {
+            await parser.destroy();
+          } catch {
+            // Ignore cleanup warnings
+          }
+        }
+
+        if (extracted && extracted.trim().length > 0) {
+          return extracted.trim();
+        }
       }
     }
   } catch {
-    // Fall through to manual stream decompressor fallback
+    if (parser && typeof parser.destroy === 'function') {
+      try {
+        await parser.destroy();
+      } catch {
+        // Ignore cleanup warnings
+      }
+    }
   }
 
   return extractTextFromCompressedPdfBuffer(pdfBuffer);
@@ -42,7 +62,6 @@ function extractTextFromCompressedPdfBuffer(pdfBuffer: Buffer): string {
     const pdfString = pdfBuffer.toString('latin1');
     const textSegments: string[] = [];
 
-    // Find stream ... endstream blocks
     const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
     let match;
     while ((match = streamRegex.exec(pdfString)) !== null) {
@@ -55,7 +74,6 @@ function extractTextFromCompressedPdfBuffer(pdfBuffer: Buffer): string {
         decompressedStr = match[1];
       }
 
-      // Extract Tj and TJ text operators
       const tjRegex = /\(([^()]*)\)\s*Tj/g;
       let tjMatch;
       while ((tjMatch = tjRegex.exec(decompressedStr)) !== null) {

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { generateGroundedSummary } from '@/lib/gemini';
 import { detectInconsistencies } from '@/lib/inconsistency';
 import { PatientInfo, LabResultItem } from '@/lib/types';

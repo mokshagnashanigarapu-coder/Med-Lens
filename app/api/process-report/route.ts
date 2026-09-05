@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PatientInfoSchema } from '@/lib/schemas';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { extractReportStructured, generateGroundedSummary } from '@/lib/gemini';
 import { evaluateReferenceRange, sanitizeSourceLocation } from '@/lib/referenceRange';
 import { detectInconsistencies } from '@/lib/inconsistency';
