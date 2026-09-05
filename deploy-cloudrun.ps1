@@ -45,14 +45,14 @@ if ($GeminiApiKey) {
       --platform managed `
       --region $Region `
       --allow-unauthenticated `
-      --set-env-vars "GEMINI_API_KEY=$GeminiApiKey,GEMINI_MODEL=gemini-2.5-flash"
+      --set-env-vars "GEMINI_API_KEY=$GeminiApiKey,GEMINI_MODEL=gemini-3.6-flash"
 } else {
     gcloud run deploy $ServiceName `
       --image "gcr.io/$ProjectId/$ServiceName`:latest" `
       --platform managed `
       --region $Region `
       --allow-unauthenticated `
-      --set-env-vars "GEMINI_MODEL=gemini-2.5-flash"
+      --set-env-vars "GEMINI_MODEL=gemini-3.6-flash"
 }
 
 Write-Host "==================================================" -ForegroundColor Green

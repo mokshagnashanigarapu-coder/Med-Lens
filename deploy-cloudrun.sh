@@ -36,14 +36,14 @@ if [ -n "$GEMINI_KEY" ]; then
     --platform managed \
     --region ${REGION} \
     --allow-unauthenticated \
-    --set-env-vars GEMINI_API_KEY="${GEMINI_KEY}",GEMINI_MODEL="gemini-2.5-flash"
+    --set-env-vars GEMINI_API_KEY="${GEMINI_KEY}",GEMINI_MODEL="gemini-3.6-flash"
 else
   gcloud run deploy ${SERVICE_NAME} \
     --image gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest \
     --platform managed \
     --region ${REGION} \
     --allow-unauthenticated \
-    --set-env-vars GEMINI_MODEL="gemini-2.5-flash"
+    --set-env-vars GEMINI_MODEL="gemini-3.6-flash"
 fi
 
 echo "=================================================="
