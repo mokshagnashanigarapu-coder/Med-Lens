@@ -15,13 +15,13 @@ export const InconsistencyBanner: React.FC<InconsistencyBannerProps> = ({ alerts
     <div
       className="glass-card"
       style={{
-        borderLeft: '4px solid #f59e0b',
-        background: 'rgba(245, 158, 11, 0.08)',
+        borderLeft: '4px solid #d97706',
+        backgroundColor: '#fffbebf5',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-        <AlertTriangle size={20} color="#f59e0b" />
-        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fbbf24' }}>
+        <AlertTriangle size={20} color="#d97706" />
+        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#b45309' }}>
           Informational Cross-Record Conflict Review ({alerts.length})
         </h3>
         <span className="badge badge-ai" style={{ marginLeft: 'auto' }}>AI DETECTED</span>
@@ -32,16 +32,16 @@ export const InconsistencyBanner: React.FC<InconsistencyBannerProps> = ({ alerts
           <div
             key={alert.id}
             style={{
-              padding: '10px 14px',
+              padding: '12px 14px',
               borderRadius: '6px',
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '1px solid rgba(245, 158, 11, 0.2)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #fde68a',
             }}
           >
-            <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#fde047' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#92400e' }}>
               {alert.title}
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#e2e8f0', marginTop: '2px' }}>
+            <div style={{ fontSize: '0.85rem', color: '#78350f', marginTop: '2px', lineHeight: 1.4 }}>
               {alert.description}
             </div>
           </div>

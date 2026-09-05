@@ -27,15 +27,17 @@ export const PatientIntakeForm: React.FC<PatientIntakeFormProps> = ({
     <div className="glass-card">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <User size={20} color="var(--accent-cyan)" />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Step 1: Patient Information Intake</h3>
+          <User size={20} color="var(--accent-blue)" />
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+            Step 1: Patient Information Intake
+          </h3>
         </div>
         <span className="badge badge-user">USER PROVIDED</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Age</label>
+          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>Age</label>
           <input
             type="number"
             min="0"
@@ -49,7 +51,7 @@ export const PatientIntakeForm: React.FC<PatientIntakeFormProps> = ({
         </div>
 
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Biological Sex</label>
+          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>Biological Sex</label>
           <select
             className="input-field"
             value={patient.sex}
@@ -63,7 +65,7 @@ export const PatientIntakeForm: React.FC<PatientIntakeFormProps> = ({
         </div>
 
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <Stethoscope size={14} /> Reported Symptoms
           </label>
           <input
@@ -77,7 +79,7 @@ export const PatientIntakeForm: React.FC<PatientIntakeFormProps> = ({
         </div>
 
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <HeartPulse size={14} /> Existing Conditions
           </label>
           <input
@@ -91,13 +93,13 @@ export const PatientIntakeForm: React.FC<PatientIntakeFormProps> = ({
         </div>
 
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f87171', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c2410c', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <AlertCircle size={14} /> Known Allergies
           </label>
           <input
             type="text"
             className="input-field"
-            style={{ borderColor: patient.allergies.length ? 'rgba(239, 68, 68, 0.4)' : undefined }}
+            style={{ borderColor: patient.allergies.length ? '#fdba74' : undefined, backgroundColor: patient.allergies.length ? '#fff7ed' : undefined }}
             value={patient.allergies.join(', ')}
             onChange={(e) => handleStringArrayChange('allergies', e.target.value)}
             disabled={disabled}
@@ -106,7 +108,7 @@ export const PatientIntakeForm: React.FC<PatientIntakeFormProps> = ({
         </div>
 
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <Pill size={14} /> Current Medications
           </label>
           <input

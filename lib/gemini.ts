@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { APP_CONFIG } from './config';
 import { RawExtractionResponseSchema, RawExtractionResponse } from './schemas';
 import { GroundedSummary, PatientInfo, LabResultItem } from './types';
+import { extractTextFromPdfBuffer } from './pdfUtils';
 
 // Initialize SDK client if API key is present
 function getGeminiClient(): GoogleGenAI | null {
@@ -13,8 +14,20 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 /**
- * Robust, server-side multimodal report extraction using Gemini API.
- * Features 12s bounded timeout, 1 retry budget for transient errors, and zero PHI logging.
+ * Clean raw response text by removing markdown code block fences (```json ... ```)
+ */
+function cleanJsonResponseText(rawText: string): string {
+  let cleaned = rawText.trim();
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '');
+    cleaned = cleaned.replace(/\s*```$/i, '');
+  }
+  return cleaned.trim();
+}
+
+/**
+ * Server-side multimodal report extraction using Gemini API.
+ * Features markdown JSON cleaning, PDF text parsing fallback, 12s bounded timeout, and 1 retry budget.
  */
 export async function extractReportStructured(
   fileBuffer?: Buffer,
@@ -46,12 +59,21 @@ Rules:
   const contents: Array<string | { inlineData: { data: string; mimeType: string } }> = [];
 
   if (fileBuffer && mimeType) {
+    // Pass binary file as inlineData
     contents.push({
       inlineData: {
         data: fileBuffer.toString('base64'),
         mimeType: mimeType,
       },
     });
+
+    // If PDF, extract text directly to double-guarantee extraction quality
+    if (mimeType === 'application/pdf') {
+      const extractedPdfText = extractTextFromPdfBuffer(fileBuffer);
+      if (extractedPdfText && extractedPdfText.trim().length > 10) {
+        contents.push(`Extracted PDF Document Text:\n${extractedPdfText.trim()}`);
+      }
+    }
   }
 
   if (rawText && rawText.trim()) {
@@ -96,7 +118,6 @@ Rules:
     required: ['extractedItems'],
   };
 
-  // Bounded execution with max 1 retry for transient errors
   let attempt = 0;
   const maxAttempts = APP_CONFIG.gemini.maxRetries + 1;
 
@@ -119,16 +140,30 @@ Rules:
         throw new Error('EMPTY_GEMINI_RESPONSE');
       }
 
-      // Parse JSON and validate with Zod
-      const parsedJson = JSON.parse(responseText);
+      // Safely strip markdown code blocks before JSON parsing
+      const cleanedJsonText = cleanJsonResponseText(responseText);
+      let parsedJson: unknown;
+      try {
+        parsedJson = JSON.parse(cleanedJsonText);
+      } catch {
+        return {
+          success: false,
+          error: {
+            code: 'MALFORMED_AI_OUTPUT',
+            message: 'Extracted response contained malformed JSON structure. Please retry or paste report text.',
+            retryable: true,
+          },
+        };
+      }
+
       const validated = RawExtractionResponseSchema.safeParse(parsedJson);
 
       if (!validated.success) {
         return {
           success: false,
           error: {
-            code: 'MALFORMED_AI_OUTPUT',
-            message: 'Extracted response did not match expected structure.',
+            code: 'SCHEMA_VALIDATION_FAILED',
+            message: 'Extracted output did not contain valid test items.',
             retryable: false,
           },
         };
@@ -143,21 +178,21 @@ Rules:
       const isLastAttempt = attempt >= maxAttempts;
       const errorMessage = err instanceof Error ? err.message : String(err);
       
-      // Determine if error is transient (HTTP 429, 503, ETIMEDOUT)
       const isTransient = errorMessage.includes('429') || errorMessage.includes('503') || errorMessage.includes('ETIMEDOUT') || errorMessage.includes('fetch failed');
 
       if (!isTransient || isLastAttempt) {
         return {
           success: false,
           error: {
-            code: isTransient ? 'API_TRANSIENT_FAILURE' : 'API_REQUEST_FAILED',
-            message: 'Unable to process medical report at this time. Please try again or use a sample scenario.',
+            code: isTransient ? 'API_TRANSIENT_FAILURE' : 'FILE_PROCESSING_FAILED',
+            message: isTransient 
+              ? 'The AI processing service is temporarily busy. Please retry in a moment.' 
+              : 'Unable to parse the medical report file. Please verify the file is a clear PDF, image, or paste text report.',
             retryable: isTransient,
           },
         };
       }
 
-      // Wait backoff duration before single retry
       await new Promise((res) => setTimeout(res, APP_CONFIG.gemini.backoffMs));
     }
   }
@@ -194,7 +229,6 @@ export async function generateGroundedSummary(
     return fallbackSummary;
   }
 
-  // Data Minimization: Prepare anonymized text representation
   const sanitizedIntake = `Patient Age: ${patient.age}, Sex: ${patient.sex}\nReported Symptoms: ${patient.symptoms.join(', ') || 'None'}\nReported Conditions: ${patient.existingConditions.join(', ') || 'None'}`;
   const sanitizedResults = labResults
     .map(
@@ -230,7 +264,8 @@ ${sanitizedResults}`;
     });
 
     if (response.text) {
-      const parsed = JSON.parse(response.text);
+      const cleaned = cleanJsonResponseText(response.text);
+      const parsed = JSON.parse(cleaned);
       return {
         overview: parsed.overview || fallbackSummary.overview,
         keyObservations: parsed.keyObservations || fallbackSummary.keyObservations,

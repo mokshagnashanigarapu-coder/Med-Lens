@@ -5,25 +5,28 @@ import { Activity, ShieldAlert } from 'lucide-react';
 
 export const Header: React.FC = () => {
   return (
-    <header className="glass-card">
+    <header className="glass-card" style={{ borderTop: '4px solid var(--accent-blue)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
-            background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
-            padding: '10px',
-            borderRadius: '12px',
+            backgroundColor: 'var(--accent-blue)',
+            padding: '12px',
+            borderRadius: '10px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-            <Activity size={28} color="white" />
+            <Activity size={30} color="white" />
           </div>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.025em', background: 'linear-gradient(90deg, #ffffff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              MedLens
+            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
+              MEDLENS
             </h1>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-              AI-Powered Clinical Information Intelligence & Data Provenance System
+            <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--accent-blue)' }}>
+              AI-Powered Clinical Information Intelligence
+            </p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Transform patient information and medical reports into a structured, traceable record for human review.
             </p>
           </div>
         </div>
@@ -39,7 +42,7 @@ export const Header: React.FC = () => {
       <div className="disclaimer-banner" style={{ marginTop: '16px' }}>
         <ShieldAlert size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
         <div>
-          <strong>Responsible AI Notice:</strong> MedLens is an information organization and review tool designed to structure fragmented medical reports. It does <strong>NOT</strong> provide medical diagnoses, treatment recommendations, or dosage modifications. Always consult a qualified healthcare professional.
+          <strong>Responsible AI Notice:</strong> MedLens is an information organization and review tool. It does <strong>NOT</strong> provide medical diagnoses, treatment recommendations, or dosage modifications. Always consult a qualified healthcare professional.
         </div>
       </div>
     </header>

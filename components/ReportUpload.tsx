@@ -35,11 +35,11 @@ export const ReportUpload: React.FC<ReportUploadProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (mode === 'file' && !selectedFile) {
-      setErrorMsg('Please select a PDF or image medical report.');
+      setErrorMsg('Please select a PDF or image medical report file.');
       return;
     }
     if (mode === 'text' && !rawText.trim()) {
-      setErrorMsg('Please paste report text content.');
+      setErrorMsg('Please paste medical report text content.');
       return;
     }
 
@@ -49,21 +49,23 @@ export const ReportUpload: React.FC<ReportUploadProps> = ({
 
   return (
     <div className="glass-card">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Upload size={20} color="var(--accent-cyan)" />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Step 2: Medical Report Upload / Input</h3>
+          <Upload size={20} color="var(--accent-blue)" />
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+            Step 2: Medical Report Upload / Input
+          </h3>
         </div>
 
-        <div style={{ display: 'flex', gap: '4px', background: 'rgba(15, 23, 42, 0.6)', padding: '4px', borderRadius: '8px' }}>
+        <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
           <button
             type="button"
             className="btn-secondary"
             style={{
-              padding: '4px 12px',
-              fontSize: '0.75rem',
-              background: mode === 'file' ? 'var(--accent-cyan)' : 'transparent',
-              color: mode === 'file' ? 'white' : 'var(--text-muted)',
+              padding: '6px 14px',
+              fontSize: '0.8rem',
+              backgroundColor: mode === 'file' ? 'var(--accent-blue)' : 'transparent',
+              color: mode === 'file' ? '#ffffff' : 'var(--text-muted)',
               border: 'none',
             }}
             onClick={() => setMode('file')}
@@ -74,10 +76,10 @@ export const ReportUpload: React.FC<ReportUploadProps> = ({
             type="button"
             className="btn-secondary"
             style={{
-              padding: '4px 12px',
-              fontSize: '0.75rem',
-              background: mode === 'text' ? 'var(--accent-cyan)' : 'transparent',
-              color: mode === 'text' ? 'white' : 'var(--text-muted)',
+              padding: '6px 14px',
+              fontSize: '0.8rem',
+              backgroundColor: mode === 'text' ? 'var(--accent-blue)' : 'transparent',
+              color: mode === 'text' ? '#ffffff' : 'var(--text-muted)',
               border: 'none',
             }}
             onClick={() => setMode('text')}
@@ -91,12 +93,13 @@ export const ReportUpload: React.FC<ReportUploadProps> = ({
         {mode === 'file' ? (
           <div
             style={{
-              border: '2px dashed var(--bg-card-border)',
+              border: '2px dashed #cbd5e1',
               borderRadius: '8px',
-              padding: '32px',
+              padding: '32px 16px',
               textAlign: 'center',
-              background: 'rgba(15, 23, 42, 0.4)',
+              backgroundColor: '#f8fafc',
               cursor: 'pointer',
+              transition: 'border-color 0.15s ease',
             }}
           >
             <input
@@ -110,18 +113,20 @@ export const ReportUpload: React.FC<ReportUploadProps> = ({
             <label htmlFor="report-file-input" style={{ cursor: 'pointer', display: 'block' }}>
               {selectedFile ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                  <FileCheck size={40} color="var(--accent-cyan)" />
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{selectedFile.name}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {(selectedFile.size / 1024).toFixed(1)} KB — Click to change file
+                  <FileCheck size={44} color="var(--accent-blue)" />
+                  <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>{selectedFile.name}</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {(selectedFile.size / 1024).toFixed(1)} KB — Click to change selected file
                   </span>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                  <Upload size={40} color="var(--text-muted)" />
-                  <span style={{ fontWeight: 600 }}>Click to select or drag & drop PDF / Image report</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Supports PDF, PNG, JPEG (Max 10MB)
+                  <Upload size={44} color="var(--accent-blue)" />
+                  <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>
+                    Click to select or drag & drop PDF / Image medical report
+                  </span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Supports PDF, PNG, JPEG, TXT (Max 10MB)
                   </span>
                 </div>
               )}
@@ -131,8 +136,8 @@ export const ReportUpload: React.FC<ReportUploadProps> = ({
           <div>
             <textarea
               className="input-field"
-              rows={5}
-              placeholder="Paste raw lab report text or clinical note here..."
+              rows={6}
+              placeholder="Paste raw medical lab report text or clinical diagnostic scan notes here..."
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
               disabled={isLoading}
@@ -142,20 +147,20 @@ export const ReportUpload: React.FC<ReportUploadProps> = ({
         )}
 
         {errorMsg && (
-          <div style={{ color: '#f87171', fontSize: '0.85rem', marginTop: '10px' }}>
+          <div style={{ color: '#c2410c', fontSize: '0.85rem', marginTop: '10px', fontWeight: 600 }}>
             ⚠️ {errorMsg}
           </div>
         )}
 
-        <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-          <button type="submit" className="btn-primary" disabled={isLoading}>
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button type="submit" className="btn-primary" disabled={isLoading} style={{ padding: '12px 24px', fontSize: '0.95rem' }}>
             {isLoading ? (
               <>
-                <Loader2 size={18} className="animate-spin" /> Processing & Extracting Report...
+                <Loader2 size={20} className="animate-spin" /> Processing report…
               </>
             ) : (
               <>
-                <FileText size={18} /> Extract Structured Medical Record
+                <FileText size={20} /> Extract Structured Medical Record
               </>
             )}
           </button>

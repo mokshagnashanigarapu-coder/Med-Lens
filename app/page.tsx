@@ -8,10 +8,12 @@ import { ReportUpload } from '@/components/ReportUpload';
 import { StructuredDataTable } from '@/components/StructuredDataTable';
 import { InconsistencyBanner } from '@/components/InconsistencyBanner';
 import { SummaryCard } from '@/components/SummaryCard';
+import { RecordHistory } from '@/components/RecordHistory';
 import { PatientInfo, LabResultItem, InconsistencyAlert, GroundedSummary, MedicalRecord } from '@/lib/types';
 import { DEMO_SCENARIOS } from '@/lib/mockData';
 import { detectInconsistencies } from '@/lib/inconsistency';
-import { AlertCircle } from 'lucide-react';
+import { saveRecordToDatabase } from '@/lib/supabase';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const INITIAL_PATIENT: PatientInfo = {
   age: 42,
@@ -35,8 +37,10 @@ export default function Home() {
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [lastSavedRecordId, setLastSavedRecordId] = useState<string | null>(null);
 
-  // 1-Click Demo Mode Handler
+  // 1-Click Demo Mode Handler (Explicitly labeled DEMO DATA)
   const handleSelectDemoScenario = (scenarioKey: string, record: MedicalRecord) => {
     setActiveDemoKey(scenarioKey);
     setIsDemoData(true);
@@ -47,6 +51,7 @@ export default function Home() {
     setSummary(record.summary);
     setRawReportContent(`Sample Report Fixture: ${record.metadata.reportFileName || 'sample_report.pdf'}\n\nClinical Scan Data loaded for Demo Mode.`);
     setErrorMsg(null);
+    setSuccessMsg('Loaded evaluator demo preset scenario.');
   };
 
   const handleReset = () => {
@@ -59,9 +64,10 @@ export default function Home() {
     setSummary(null);
     setRawReportContent('');
     setErrorMsg(null);
+    setSuccessMsg(null);
   };
 
-  // Real-time Patient Intake Change Handler
+  // Real-time Patient Intake Change Handler (Preserves user input)
   const handlePatientChange = (newPatient: PatientInfo) => {
     setPatient(newPatient);
     if (labResults.length > 0) {
@@ -74,6 +80,7 @@ export default function Home() {
   const handleProcessReport = async (file: File | null, rawText: string) => {
     setIsLoading(true);
     setErrorMsg(null);
+    setSuccessMsg(null);
     setIsDemoData(false);
     setActiveDemoKey(null);
     setDemoLabel('');
@@ -81,6 +88,7 @@ export default function Home() {
 
     try {
       const formData = new FormData();
+      // Send CURRENT patient state entered by user
       formData.append('patient', JSON.stringify(patient));
       if (file) {
         formData.append('file', file);
@@ -97,7 +105,7 @@ export default function Home() {
       const json = await res.json();
 
       if (!json.success) {
-        setErrorMsg(json.error?.message || 'Failed to process report.');
+        setErrorMsg(json.error?.message || 'The medical report file could not be parsed. Please check the file or paste text content.');
         setIsLoading(false);
         return;
       }
@@ -106,8 +114,15 @@ export default function Home() {
       setLabResults(data.labResults);
       setInconsistencies(data.inconsistencies);
       setSummary(data.summary);
+      setSuccessMsg('Report processed successfully.');
+
+      // Persist to Supabase if database is configured
+      const dbResult = await saveRecordToDatabase(data);
+      if (dbResult.recordId) {
+        setLastSavedRecordId(dbResult.recordId);
+      }
     } catch {
-      setErrorMsg('Network error connecting to MedLens processing engine. Please check your connection or try a sample scenario.');
+      setErrorMsg('Network error connecting to MedLens processing engine. Please check your network connection or try pasting text report.');
     } finally {
       setIsLoading(false);
     }
@@ -118,9 +133,19 @@ export default function Home() {
     const newResults = labResults.map((item) => (item.id === updatedItem.id ? updatedItem : item));
     setLabResults(newResults);
 
-    // Re-evaluate inconsistencies deterministically
     const newConflicts = detectInconsistencies(patient, newResults);
     setInconsistencies(newConflicts);
+  };
+
+  // Load record retrieved from database
+  const handleLoadRecordFromHistory = (record: MedicalRecord) => {
+    setIsDemoData(false);
+    setActiveDemoKey(null);
+    setPatient(record.patient);
+    setLabResults(record.labResults);
+    setInconsistencies(record.inconsistencies);
+    setSummary(record.summary);
+    setSuccessMsg('Retrieved saved record from database.');
   };
 
   return (
@@ -144,13 +169,25 @@ export default function Home() {
         </div>
       )}
 
+      {/* Global Success Banner */}
+      {successMsg && !isDemoData && (
+        <div className="glass-card" style={{ borderLeft: '4px solid #059669', background: '#ecfdf5', color: '#047857' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={20} color="#059669" />
+            <div>
+              <strong>Success:</strong> {successMsg}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Global Error Banner */}
       {errorMsg && (
-        <div className="glass-card" style={{ borderLeft: '4px solid #ef4444', background: 'rgba(239, 68, 68, 0.1)', color: '#fca5a5' }}>
+        <div className="glass-card" style={{ borderLeft: '4px solid #c2410c', background: '#fff7ed', color: '#c2410c' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertCircle size={20} color="#ef4444" />
+            <AlertCircle size={20} color="#c2410c" />
             <div>
-              <strong>Processing Error:</strong> {errorMsg}
+              <strong>Processing Alert:</strong> {errorMsg}
             </div>
           </div>
         </div>
@@ -161,6 +198,9 @@ export default function Home() {
 
       {/* Step 2: Medical Report Upload & Input */}
       <ReportUpload onProcessReport={handleProcessReport} isLoading={isLoading} />
+
+      {/* Record History & Database Status */}
+      <RecordHistory onLoadRecord={handleLoadRecordFromHistory} lastSavedRecordId={lastSavedRecordId} />
 
       {/* Step 3: Structured Medical Table & Provenance Grid */}
       <StructuredDataTable

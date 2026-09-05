@@ -67,17 +67,21 @@ export const StructuredDataTable: React.FC<StructuredDataTableProps> = ({
     <div className="glass-card">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Table size={20} color="var(--accent-cyan)" />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Step 3: Structured Medical Record & Provenance Grid</h3>
+          <Table size={20} color="var(--accent-blue)" />
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+            Step 3 & 4: Structured Clinical Record & Provenance Grid
+          </h3>
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             className="btn-secondary"
             style={{
-              fontSize: '0.75rem',
-              padding: '4px 10px',
-              borderColor: activeTab === 'structured' ? 'var(--accent-cyan)' : undefined,
+              fontSize: '0.8rem',
+              padding: '6px 12px',
+              borderColor: activeTab === 'structured' ? 'var(--accent-blue)' : undefined,
+              backgroundColor: activeTab === 'structured' ? '#eff6ff' : undefined,
+              color: activeTab === 'structured' ? 'var(--accent-blue)' : undefined,
             }}
             onClick={() => setActiveTab('structured')}
           >
@@ -86,9 +90,11 @@ export const StructuredDataTable: React.FC<StructuredDataTableProps> = ({
           <button
             className="btn-secondary"
             style={{
-              fontSize: '0.75rem',
-              padding: '4px 10px',
-              borderColor: activeTab === 'sideBySide' ? 'var(--accent-cyan)' : undefined,
+              fontSize: '0.8rem',
+              padding: '6px 12px',
+              borderColor: activeTab === 'sideBySide' ? 'var(--accent-blue)' : undefined,
+              backgroundColor: activeTab === 'sideBySide' ? '#eff6ff' : undefined,
+              color: activeTab === 'sideBySide' ? 'var(--accent-blue)' : undefined,
             }}
             onClick={() => setActiveTab('sideBySide')}
           >
@@ -98,8 +104,10 @@ export const StructuredDataTable: React.FC<StructuredDataTableProps> = ({
       </div>
 
       {labResults.length === 0 ? (
-        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
-          No laboratory results extracted yet. Upload a report or load a sample scenario above.
+        <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-muted)', backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px' }}>
+          <Table size={36} color="var(--text-muted)" style={{ marginBottom: '8px' }} />
+          <p style={{ fontWeight: '600', fontSize: '0.95rem' }}>No laboratory test items extracted yet.</p>
+          <p style={{ fontSize: '0.85rem', marginTop: '2px' }}>Upload a report above or select an AI Evaluator Quick Preset to view structured results.</p>
         </div>
       ) : activeTab === 'structured' ? (
         <div className="table-container">
@@ -110,7 +118,7 @@ export const StructuredDataTable: React.FC<StructuredDataTableProps> = ({
                 <th>Result Value</th>
                 <th>Source Reference Range</th>
                 <th>Deterministic Status</th>
-                <th>Source Traceability</th>
+                <th>Source Location</th>
                 <th>Provenance Tag</th>
                 <th>Human Verification</th>
               </tr>
@@ -118,32 +126,32 @@ export const StructuredDataTable: React.FC<StructuredDataTableProps> = ({
             <tbody>
               {labResults.map((item) => (
                 <tr key={item.id}>
-                  <td style={{ fontWeight: 600 }}>{item.testName}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>{item.testName}</td>
                   <td>
                     {editingId === item.id ? (
-                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <input
                           type="text"
                           className="input-field"
-                          style={{ width: '100px', padding: '2px 6px' }}
+                          style={{ width: '110px', padding: '4px 8px', margin: 0 }}
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
                         />
                         <button
                           className="btn-primary"
-                          style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                          style={{ padding: '4px 10px', fontSize: '0.75rem' }}
                           onClick={() => handleSaveEdit(item)}
                         >
                           Save
                         </button>
                       </div>
                     ) : (
-                      <span style={{ fontWeight: 700 }}>
+                      <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>
                         {item.value} {item.unit}
                       </span>
                     )}
                   </td>
-                  <td style={{ color: 'var(--text-muted)' }}>
+                  <td style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
                     {item.referenceRange || 'Not provided'}
                   </td>
                   <td>
@@ -151,23 +159,23 @@ export const StructuredDataTable: React.FC<StructuredDataTableProps> = ({
                       {item.status}
                     </span>
                   </td>
-                  <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MapPin size={12} color="var(--accent-cyan)" />
+                      <MapPin size={13} color="var(--accent-blue)" />
                       {item.sourceLocation}
                     </div>
                   </td>
                   <td>{renderProvenanceBadge(item.provenance)}</td>
                   <td>
                     {item.isHumanVerified ? (
-                      <span style={{ color: '#fbbf24', fontSize: '0.75rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <ShieldCheck size={14} /> Verified
+                      <span style={{ color: '#b45309', fontSize: '0.8rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#fffbebf5', padding: '4px 8px', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                        <ShieldCheck size={15} /> Verified
                       </span>
                     ) : (
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button
                           className="btn-secondary"
-                          style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                          style={{ padding: '4px 8px', fontSize: '0.75rem' }}
                           onClick={() => handleStartEdit(item)}
                           title="Edit extracted value"
                         >
@@ -175,7 +183,7 @@ export const StructuredDataTable: React.FC<StructuredDataTableProps> = ({
                         </button>
                         <button
                           className="btn-secondary"
-                          style={{ padding: '2px 6px', fontSize: '0.7rem', color: '#34d399' }}
+                          style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#047857', backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }}
                           onClick={() => handleConfirmVerified(item)}
                           title="Confirm accuracy"
                         >
@@ -191,30 +199,30 @@ export const StructuredDataTable: React.FC<StructuredDataTableProps> = ({
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-          <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '16px', borderRadius: '8px', border: '1px solid var(--bg-card-border)' }}>
+          <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>
-              SOURCE REPORT REFERENCE / PREVIEW
+              SOURCE REPORT TEXT PREVIEW
             </h4>
-            <pre style={{ fontSize: '0.8rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', maxHeight: '300px', overflowY: 'auto' }}>
+            <pre style={{ fontSize: '0.8rem', color: 'var(--text-main)', whiteSpace: 'pre-wrap', maxHeight: '300px', overflowY: 'auto', backgroundColor: '#ffffff', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
               {rawReportContent || 'Sample Clinical Scan Preview / Report Text (Loaded in active scenario context)'}
             </pre>
           </div>
 
-          <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '16px', borderRadius: '8px', border: '1px solid var(--bg-card-border)' }}>
-            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '8px' }}>
+          <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: '8px' }}>
               EXTRACTED STRUCTURED ITEMS ({labResults.length})
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
               {labResults.map((item) => (
-                <div key={item.id} style={{ padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 600 }}>{item.testName}</span>
+                <div key={item.id} style={{ padding: '10px', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700 }}>{item.testName}</span>
                     <span className={`status-badge status-${item.status}`}>{item.status}</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Result: {item.value} {item.unit} | Range: {item.referenceRange}
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Result: <strong>{item.value} {item.unit}</strong> | Range: {item.referenceRange}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--accent-cyan)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', marginTop: '4px' }}>
                     📍 {item.sourceLocation}
                   </div>
                 </div>
