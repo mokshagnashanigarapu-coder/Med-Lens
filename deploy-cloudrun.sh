@@ -3,13 +3,18 @@
 
 set -e
 
-PROJECT_ID=${1:-$(gcloud config get-value project)}
+PROJECT_ID=${1:-$(gcloud config get-value project 2>/dev/null)}
 REGION=${2:-"us-central1"}
 SERVICE_NAME="medlens"
 
 if [ -z "$PROJECT_ID" ]; then
-  echo "Error: GCP Project ID is missing. Usage: ./deploy-cloudrun.sh [PROJECT_ID] [REGION]"
+  echo "Error: GCP Project ID is required. Usage: ./deploy-cloudrun.sh YOUR_GCP_PROJECT_ID [REGION]"
   exit 1
+fi
+
+GEMINI_KEY=""
+if [ -f ".env.local" ]; then
+  GEMINI_KEY=$(grep "^GEMINI_API_KEY=" .env.local | cut -d '=' -f2- | tr -d '\r')
 fi
 
 echo "=================================================="
@@ -19,16 +24,27 @@ echo " Region:  ${REGION}"
 echo " Service: ${SERVICE_NAME}"
 echo "=================================================="
 
-# Build container using Google Cloud Build
+# Step 1: Submit container build using Cloud Build
+echo "Step 1/2: Building container image via Cloud Build..."
 gcloud builds submit --tag gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest .
 
-# Deploy container to Cloud Run
-gcloud run deploy ${SERVICE_NAME} \
-  --image gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest \
-  --platform managed \
-  --region ${REGION} \
-  --allow-unauthenticated \
-  --set-env-vars GEMINI_MODEL="gemini-2.5-flash"
+# Step 2: Deploy container to Cloud Run
+echo "Step 2/2: Deploying container to Cloud Run..."
+if [ -n "$GEMINI_KEY" ]; then
+  gcloud run deploy ${SERVICE_NAME} \
+    --image gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest \
+    --platform managed \
+    --region ${REGION} \
+    --allow-unauthenticated \
+    --set-env-vars GEMINI_API_KEY="${GEMINI_KEY}",GEMINI_MODEL="gemini-2.5-flash"
+else
+  gcloud run deploy ${SERVICE_NAME} \
+    --image gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest \
+    --platform managed \
+    --region ${REGION} \
+    --allow-unauthenticated \
+    --set-env-vars GEMINI_MODEL="gemini-2.5-flash"
+fi
 
 echo "=================================================="
 echo " MedLens Cloud Run Deployment Complete!"
