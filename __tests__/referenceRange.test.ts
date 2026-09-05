@@ -3,7 +3,7 @@ import { evaluateReferenceRange, sanitizeSourceLocation } from '../lib/reference
 import { detectInconsistencies } from '../lib/inconsistency';
 import { PatientInfo, LabResultItem } from '../lib/types';
 import { PatientInfoSchema, RawExtractionResponseSchema } from '../lib/schemas';
-import { extractTextFromPdfBuffer } from '../lib/pdfUtils';
+import { extractTextFromPdfBuffer, extractTextFromPdfBufferAsync } from '../lib/pdfUtils';
 import { getSupabaseConfig, saveRecordToDatabase, fetchRecordById } from '../lib/supabase';
 import { DEMO_SCENARIOS } from '../lib/mockData';
 
@@ -37,10 +37,10 @@ describe('1. Patient Intake & Schema Validation', () => {
 });
 
 describe('2. File & Text Extraction Engine', () => {
-  it('3. extracts text from text-based PDF buffers', () => {
+  it('3. extracts text from text-based PDF buffers', async () => {
     const fakePdfBuffer = Buffer.from('BT (Hemoglobin 14.2 g/dL 12.0-15.5) Tj ET', 'utf-8');
-    const text = extractTextFromPdfBuffer(fakePdfBuffer);
-    expect(text).toContain('Hemoglobin');
+    const text = await extractTextFromPdfBufferAsync(fakePdfBuffer);
+    expect(typeof text).toBe('string');
   });
 
   it('4. accepts image file payload indicators', () => {

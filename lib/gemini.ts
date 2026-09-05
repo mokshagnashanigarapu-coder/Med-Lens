@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { APP_CONFIG } from './config';
 import { RawExtractionResponseSchema, RawExtractionResponse } from './schemas';
 import { GroundedSummary, PatientInfo, LabResultItem } from './types';
-import { extractTextFromPdfBuffer } from './pdfUtils';
+import { extractTextFromPdfBufferAsync } from './pdfUtils';
 
 // Initialize SDK client if API key is present
 function getGeminiClient(): GoogleGenAI | null {
@@ -25,15 +25,23 @@ function cleanJsonResponseText(rawText: string): string {
   return cleaned.trim();
 }
 
+export type ExtractionErrorResult = {
+  success: false;
+  error: {
+    code: 'API_KEY_MISSING' | 'INVALID_INPUT' | 'PDF_TEXT_EXTRACTION_FAILED' | 'PDF_EMPTY_TEXT' | 'UNSUPPORTED_FILE_TYPE' | 'FILE_TOO_LARGE' | 'GEMINI_PROCESSING_FAILED' | 'SCHEMA_VALIDATION_FAILED';
+    message: string;
+    retryable: boolean;
+  };
+};
+
 /**
- * Server-side multimodal report extraction using Gemini API.
- * Features markdown JSON cleaning, PDF text parsing fallback, 12s bounded timeout, and 1 retry budget.
+ * Server-side report extraction pipeline supporting PDF, Image, and Pasted Text.
  */
 export async function extractReportStructured(
   fileBuffer?: Buffer,
   mimeType?: string,
   rawText?: string
-): Promise<{ success: true; data: RawExtractionResponse } | { success: false; error: { code: string; message: string; retryable: boolean } }> {
+): Promise<{ success: true; data: RawExtractionResponse } | ExtractionErrorResult> {
   const ai = getGeminiClient();
 
   if (!ai) {
@@ -58,26 +66,36 @@ Rules:
 
   const contents: Array<string | { inlineData: { data: string; mimeType: string } }> = [];
 
-  if (fileBuffer && mimeType) {
-    // Pass binary file as inlineData
+  // PATH 1: PDF Document Processing
+  if (fileBuffer && mimeType === 'application/pdf') {
+    const pdfText = await extractTextFromPdfBufferAsync(fileBuffer);
+    
+    if (pdfText && pdfText.trim().length > 0) {
+      contents.push(`Extracted PDF Medical Report Text:\n${pdfText.trim()}`);
+    } else {
+      // Send PDF inlineData if PDF contains scanned image objects
+      contents.push({
+        inlineData: {
+          data: fileBuffer.toString('base64'),
+          mimeType: 'application/pdf',
+        },
+      });
+    }
+  }
+
+  // PATH 2: Image Processing (PNG/JPEG)
+  if (fileBuffer && mimeType && mimeType.startsWith('image/')) {
     contents.push({
       inlineData: {
         data: fileBuffer.toString('base64'),
         mimeType: mimeType,
       },
     });
-
-    // If PDF, extract text directly to double-guarantee extraction quality
-    if (mimeType === 'application/pdf') {
-      const extractedPdfText = extractTextFromPdfBuffer(fileBuffer);
-      if (extractedPdfText && extractedPdfText.trim().length > 10) {
-        contents.push(`Extracted PDF Document Text:\n${extractedPdfText.trim()}`);
-      }
-    }
   }
 
+  // PATH 3: Pasted Medical Report Text
   if (rawText && rawText.trim()) {
-    contents.push(`Extracted Report Text Content:\n${rawText.trim()}`);
+    contents.push(`Extracted Medical Report Text Content:\n${rawText.trim()}`);
   }
 
   if (contents.length === 0) {
@@ -140,7 +158,6 @@ Rules:
         throw new Error('EMPTY_GEMINI_RESPONSE');
       }
 
-      // Safely strip markdown code blocks before JSON parsing
       const cleanedJsonText = cleanJsonResponseText(responseText);
       let parsedJson: unknown;
       try {
@@ -149,8 +166,8 @@ Rules:
         return {
           success: false,
           error: {
-            code: 'MALFORMED_AI_OUTPUT',
-            message: 'Extracted response contained malformed JSON structure. Please retry or paste report text.',
+            code: 'GEMINI_PROCESSING_FAILED',
+            message: 'AI response contained malformed structure. Please retry or paste report text.',
             retryable: true,
           },
         };
@@ -163,7 +180,7 @@ Rules:
           success: false,
           error: {
             code: 'SCHEMA_VALIDATION_FAILED',
-            message: 'Extracted output did not contain valid test items.',
+            message: 'Extracted response did not contain valid test items.',
             retryable: false,
           },
         };
@@ -184,10 +201,10 @@ Rules:
         return {
           success: false,
           error: {
-            code: isTransient ? 'API_TRANSIENT_FAILURE' : 'FILE_PROCESSING_FAILED',
+            code: 'GEMINI_PROCESSING_FAILED',
             message: isTransient 
               ? 'The AI processing service is temporarily busy. Please retry in a moment.' 
-              : 'Unable to parse the medical report file. Please verify the file is a clear PDF, image, or paste text report.',
+              : 'The PDF or report file could not be parsed by the AI engine. Please verify the file or paste the report text.',
             retryable: isTransient,
           },
         };
@@ -200,7 +217,7 @@ Rules:
   return {
     success: false,
     error: {
-      code: 'API_MAX_RETRIES_EXCEEDED',
+      code: 'GEMINI_PROCESSING_FAILED',
       message: 'Service is temporarily busy. Please load a sample scenario or retry.',
       retryable: true,
     },
@@ -209,7 +226,6 @@ Rules:
 
 /**
  * Generates a concise, patient-friendly grounded summary.
- * Strictly bounded by available intake and extracted lab items.
  */
 export async function generateGroundedSummary(
   patient: PatientInfo,
