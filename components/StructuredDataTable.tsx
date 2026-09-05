@@ -1,0 +1,228 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Table, CheckCircle2, Edit2, ShieldCheck, MapPin, Eye } from 'lucide-react';
+import { LabResultItem, ProvenanceSource } from '@/lib/types';
+import { evaluateReferenceRange } from '@/lib/referenceRange';
+
+interface StructuredDataTableProps {
+  labResults: LabResultItem[];
+  onUpdateItem: (updatedItem: LabResultItem) => void;
+  rawReportContent?: string;
+}
+
+export const StructuredDataTable: React.FC<StructuredDataTableProps> = ({
+  labResults,
+  onUpdateItem,
+  rawReportContent,
+}) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'structured' | 'sideBySide'>('structured');
+
+  const handleStartEdit = (item: LabResultItem) => {
+    setEditingId(item.id);
+    setEditValue(item.value);
+  };
+
+  const handleSaveEdit = (item: LabResultItem) => {
+    const rangeEvaluation = evaluateReferenceRange(editValue, item.referenceRange);
+    const updated: LabResultItem = {
+      ...item,
+      value: editValue,
+      numericValue: rangeEvaluation.numericValue,
+      status: rangeEvaluation.status,
+      provenance: 'HUMAN_VERIFIED',
+      isHumanVerified: true,
+    };
+    onUpdateItem(updated);
+    setEditingId(null);
+  };
+
+  const handleConfirmVerified = (item: LabResultItem) => {
+    const updated: LabResultItem = {
+      ...item,
+      provenance: 'HUMAN_VERIFIED',
+      isHumanVerified: true,
+    };
+    onUpdateItem(updated);
+  };
+
+  const renderProvenanceBadge = (provenance: ProvenanceSource) => {
+    switch (provenance) {
+      case 'USER_PROVIDED':
+        return <span className="badge badge-user">USER PROVIDED</span>;
+      case 'REPORT_EXTRACTED':
+        return <span className="badge badge-report">REPORT EXTRACTED</span>;
+      case 'HUMAN_VERIFIED':
+        return <span className="badge badge-human">✓ HUMAN VERIFIED</span>;
+      case 'AI_GENERATED':
+        return <span className="badge badge-ai">AI GENERATED</span>;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="glass-card">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Table size={20} color="var(--accent-cyan)" />
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Step 3: Structured Medical Record & Provenance Grid</h3>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            className="btn-secondary"
+            style={{
+              fontSize: '0.75rem',
+              padding: '4px 10px',
+              borderColor: activeTab === 'structured' ? 'var(--accent-cyan)' : undefined,
+            }}
+            onClick={() => setActiveTab('structured')}
+          >
+            <Table size={14} style={{ display: 'inline', marginRight: '4px' }} /> Structured Table
+          </button>
+          <button
+            className="btn-secondary"
+            style={{
+              fontSize: '0.75rem',
+              padding: '4px 10px',
+              borderColor: activeTab === 'sideBySide' ? 'var(--accent-cyan)' : undefined,
+            }}
+            onClick={() => setActiveTab('sideBySide')}
+          >
+            <Eye size={14} style={{ display: 'inline', marginRight: '4px' }} /> Side-by-Side Source View
+          </button>
+        </div>
+      </div>
+
+      {labResults.length === 0 ? (
+        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+          No laboratory results extracted yet. Upload a report or load a sample scenario above.
+        </div>
+      ) : activeTab === 'structured' ? (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Test Name</th>
+                <th>Result Value</th>
+                <th>Source Reference Range</th>
+                <th>Deterministic Status</th>
+                <th>Source Traceability</th>
+                <th>Provenance Tag</th>
+                <th>Human Verification</th>
+              </tr>
+            </thead>
+            <tbody>
+              {labResults.map((item) => (
+                <tr key={item.id}>
+                  <td style={{ fontWeight: 600 }}>{item.testName}</td>
+                  <td>
+                    {editingId === item.id ? (
+                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          className="input-field"
+                          style={{ width: '100px', padding: '2px 6px' }}
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                        />
+                        <button
+                          className="btn-primary"
+                          style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                          onClick={() => handleSaveEdit(item)}
+                        >
+                          Save
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ fontWeight: 700 }}>
+                        {item.value} {item.unit}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ color: 'var(--text-muted)' }}>
+                    {item.referenceRange || 'Not provided'}
+                  </td>
+                  <td>
+                    <span className={`status-badge status-${item.status}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MapPin size={12} color="var(--accent-cyan)" />
+                      {item.sourceLocation}
+                    </div>
+                  </td>
+                  <td>{renderProvenanceBadge(item.provenance)}</td>
+                  <td>
+                    {item.isHumanVerified ? (
+                      <span style={{ color: '#fbbf24', fontSize: '0.75rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <ShieldCheck size={14} /> Verified
+                      </span>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                          onClick={() => handleStartEdit(item)}
+                          title="Edit extracted value"
+                        >
+                          <Edit2 size={12} /> Edit
+                        </button>
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '2px 6px', fontSize: '0.7rem', color: '#34d399' }}
+                          onClick={() => handleConfirmVerified(item)}
+                          title="Confirm accuracy"
+                        >
+                          <CheckCircle2 size={12} /> Confirm
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+          <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '16px', borderRadius: '8px', border: '1px solid var(--bg-card-border)' }}>
+            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>
+              SOURCE REPORT REFERENCE / PREVIEW
+            </h4>
+            <pre style={{ fontSize: '0.8rem', color: '#cbd5e1', whiteSpace: 'pre-wrap', maxHeight: '300px', overflowY: 'auto' }}>
+              {rawReportContent || 'Sample Clinical Scan Preview / Report Text (Loaded in active scenario context)'}
+            </pre>
+          </div>
+
+          <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '16px', borderRadius: '8px', border: '1px solid var(--bg-card-border)' }}>
+            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '8px' }}>
+              EXTRACTED STRUCTURED ITEMS ({labResults.length})
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+              {labResults.map((item) => (
+                <div key={item.id} style={{ padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: 600 }}>{item.testName}</span>
+                    <span className={`status-badge status-${item.status}`}>{item.status}</span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Result: {item.value} {item.unit} | Range: {item.referenceRange}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--accent-cyan)' }}>
+                    📍 {item.sourceLocation}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
